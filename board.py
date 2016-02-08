@@ -73,7 +73,6 @@ class Board:
                             this_n["-A"] = self.board[vert_index][j+1]
                 self.board[i][j].neighbors = this_n
         self.update_edges()
-        self.traverser = Traverser(self)
     
     def get_board(self):
         return self.board
@@ -112,9 +111,9 @@ class Board:
         for p in self.pieces:
             yield p.piece_name
     
-    def edges(self):
-        for e in self.edges:
-            yield e
+#    def edges(self):
+#        for e in self.edges:
+#            yield e
     
     def __getitem__(self,tup):
         y = tup[0]
@@ -145,33 +144,41 @@ class Board:
                     new_edges.append(t)
         self.edges = new_edges
     
-    def place(self,piece,position,min_edges=None):
+    def fits_on_board(self,piece,position):
+        piece.clean()
+        if self.__getitem__(position).direction != piece.tiles[0].direction:
+            return False
+            #raise DirectionException("the first tile of this piece is pointing " + piece.tiles[0].direction + ", the specified position on the board is a tile pointing " + self.__getitem__(position).direction)
+
+        if self.__getitem__(position).occupied:
+            return False
+            #raise InitializationException("first tile is occupied")
+        piece.tiles[0].coords = position
+        piece.tiles[0].placed = True
+        tr = Traverser(self)
+        hun = Queue(6) # hun = Has Unplaced Neighbors
+        hun.put(piece.tiles[0])
+        while not hun.empty():
+            t = hun.get()
+            for d,n in t.neighbors.iteritems():
+                if n.coords is not None:
+                    continue
+                tr.set_current(t.coords)
+                if tr.move_unoccupied(d):
+                    n.coords = tr.current.coords
+                    hun.put(n)
+                else:
+                    piece.clean()
+                    return False
+                    #raise DirectionException("piece didn't fit on board")
+        return True
+    
+    def place(self,piece,position=None,min_edges=None):
         
-        def fits_on_board():
-            if self.__getitem__(position).direction != piece.tiles[0].direction:
-                return False
-                #raise DirectionException("the first tile of this piece is pointing " + piece.tiles[0].direction + ", the specified position on the board is a tile pointing " + self.__getitem__(position).direction)
-            
-            if self.__getitem__(position).occupied:
-                return False
-                #raise InitializationException("first tile is occupied")
-            piece.tiles[0].coords = position
-            piece.tiles[0].placed = True
-            hun = Queue(6)
-            hun.put(piece.tiles[0])
-            while not hun.empty():
-                t = hun.get()
-                for d,n in t.neighbors.iteritems():
-                    if n.coords is not None:
-                        continue
-                    self.traverser.set_current(t.coords)
-                    if self.traverser.move_unoccupied(d):
-                        n.coords = self.traverser.current.coords
-                        hun.put(n)
-                    else:
-                        piece.clean()
-                        return False
-                        #raise DirectionException("piece didn't fit on board")
+        def all_piece_tiles_filled():
+            for t in piece.tiles:
+                if t.coords is None:
+                    return False
             return True
         
         def enough_edges_covered():
@@ -195,10 +202,18 @@ class Board:
                 board_t.occupied = True
                 board_t.piece_name = piece.piece_name
         
-        if fits_on_board() and enough_edges_covered():
+        if position is None:
+            if not all_piece_tiles_filled():
+                return False
+            fits_on_board = True
+        else:
+            fits_on_board = self.fits_on_board(piece,position)
+        
+        if fits_on_board and enough_edges_covered():
             place_piece()
             self.update_edges()
         else:
+            piece.clean()
             return False
         piece.clean()
         return True
