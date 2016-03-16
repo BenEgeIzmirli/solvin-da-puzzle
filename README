@@ -1,0 +1,33 @@
+This program solves a Board puzzle that my friend has.
+It uses a dynamic programing solution to explore the
+entire solution tree and determine all possible ways of
+completing the puzzle.
+
+solving dis shiz.ipynb - contains an ipython notebook
+    (now Jupyter notebook) that shows an example of
+    how the program can be used to obtain solutions to
+    the puzzle.
+solver.py - the main package that contains the recursive
+    solver.
+solver_helper.py - contains a variety of helper functions
+    for solver.py.
+plausible.py - contains a separate set of helper functions
+    for solver.py. This is where many optimizations/
+    simplifications help reduce the problem's solution space.
+board.py - contains the main Board object that constructs
+    and contains the puzzle board.
+tile.py - contains the smallest element of the puzzle, a
+    Tile object. Each Tile object stores a variety of
+    attributes, including references to its adjacent Tiles.
+    The relationships between the shapes are based on a three-
+    direction coordinate system labelled A, B, and C, where
+    all three of the directions are separated by 120 degrees.
+piece.py - contains the Piece class, which holds a set of
+    Tiles in one of a variety of specified shapes. This puzzle
+    has twelve shapes, and each shape can only be placed once.
+traverser.py - contains the Traverser class, which moves
+    between adjacent unoccupied Tiles on the Board.
+plotting_helpers.py - some helpers for matplotlib to do
+    its magic.
+my_exceptions.py - a few custom exceptions for custom issues
+
