@@ -1,7 +1,14 @@
 This program solves a Board puzzle that my friend has.
 It uses a dynamic programing solution to explore the
 entire solution tree and determine all possible ways of
-completing the puzzle.
+completing the puzzle. It's currently not optimized
+enough to solve a board with fewer than 5 pieces placed
+in reasonable amounts of time, but with a few more
+optimizations, multiprocessing, and an overnight run,
+I'm pretty sure it could find all solutions to this
+puzzle. Here's an overview of the files in the repo and
+what each of them does:
+
 
 solving dis shiz.ipynb - contains an ipython notebook
     (now Jupyter notebook) that shows an example of
@@ -31,3 +38,12 @@ plotting_helpers.py - some helpers for matplotlib to do
     its magic.
 my_exceptions.py - a few custom exceptions for custom issues
 
+
+The next step on this project should be either to introduce
+multithreading or to code the most often-executed functions
+in C. The main difficulty in implementing multithreading
+has so far been bypassing the GIL - using multiprocessing
+instead of multithreading is possible, but then it is
+difficult to implement shared memory, and new ctypes are
+needed ; on the other hand, coding Python modules in C
+looks like a huge pain in the ass.
