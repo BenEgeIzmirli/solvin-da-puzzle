@@ -4,7 +4,6 @@ class Tile:
         self.neighbors = None
         self.direction = None
         self.flood_filled = False
-        self.placed = False
         self.coords = None
         self.edge = False
         self.piece_name = None

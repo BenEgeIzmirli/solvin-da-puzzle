@@ -4,9 +4,17 @@ from traverser import *
 from my_exceptions import *
 from plotting_helpers import *
 import matplotlib.pyplot as plt
-from Queue import Queue
 
+# This is the main class that constructs and contains the board.
+# Each Board contains a list of Tiles that each contain references
+# to all of their neighbors. The user can place Pieces on the Board;
+# Pieces are uniquely shaped combinations of Tiles that outline a
+# particular shape for the Tiles to be in.
 class Board:
+    # This class holds the board. Because it is oddly shaped, this
+    # constructor must do this horrible cludgeon of code to properly
+    # format and create the board in an intuitive manner. The board is
+    # constructed of tiles that contain references to all of their neighbors.
     def __init__(self):
         self.board = list(range(8))
         self.edges = []
@@ -41,7 +49,7 @@ class Board:
                     vert_index = i+1
                 elif t.direction == "down":
                     vert_index = i-1
-                
+
                 if horiz_index_left>=0:
                     temp_tile = self.board[i][horiz_index_left]
                     if t.direction == "up":
@@ -54,7 +62,7 @@ class Board:
                         this_n["C"] = temp_tile
                     else:
                         this_n["-B"] = temp_tile
-                
+
                 if vert_index in list(range(len(self.board))):
                     if i==0 and t.direction == "up":
                         this_n["A"] = self.board[vert_index][j+1]
@@ -73,15 +81,18 @@ class Board:
                             this_n["-A"] = self.board[vert_index][j+1]
                 self.board[i][j].neighbors = this_n
         self.update_edges()
-    
+        self.traverser = Traverser(self)
+
     def get_board(self):
         return self.board
-    
+
+    # a generator that yields every tile in the board.
     def tiles(self):
         for row in self.board:
             for t in row:
                 yield t
-    
+
+    # returns a string that uniquely represents this Board.
     def to_string(self):
         ret = ""
         for t in self.tiles():
@@ -90,36 +101,48 @@ class Board:
             else:
                 ret += t.piece_name[0]
         return ret
-    
+
+    # returns whether this Board is solved.
     def is_solved(self):
         return len(self.pieces) == 12
-    
+
+    # a generator that yields every unoccupied tile in the Board.
     def unoccupied(self):
         for t in self.tiles():
             if not t.occupied:
                 yield t
-    
+
+    # a generator that yields every occupied tile in the Board.
     def occupied(self):
         for t in self.tiles():
             if t.occupied:
                 yield t
-    
+
     def get_pieces(self):
         return self.pieces
-    
+
+    # a generator that yields the name of each of the Pieces placed
+    # on this Board.
     def piece_names(self):
         for p in self.pieces:
             yield p.piece_name
-    
-#    def edges(self):
-#        for e in self.edges:
-#            yield e
-    
+
+    # The tiles that share a border with either the edge of the Board
+    # or an occupied tile are labeled "edges"; this generator yields
+    # all of the references to the edge tiles.
+    def edges(self):
+        for e in self.edges:
+            yield e
+
+    # the Board class can be accessed like lists, i.e. myboard[3,6]
     def __getitem__(self,tup):
         y = tup[0]
         x = tup[1]
         return self.board[y][x]
 
+    # The tiles that share a border with either the edge of the Board
+    # or an occupied tile are labeled "edges"; this function updates
+    # the list of edges for the present board.
     def update_edges(self):
         # will be assigned to self.edges at the end
         new_edges = []
@@ -131,7 +154,7 @@ class Board:
             else:
                 # assume it's not an edge
                 t.edge = False
-                # if it has less than three neighbors, it's an edge 
+                # if it has less than three neighbors, it's an edge
                 if len(t.neighbors)<3:
                     t.edge = True
                 else:
@@ -143,44 +166,52 @@ class Board:
                     t.edge = True
                     new_edges.append(t)
         self.edges = new_edges
-    
-    def fits_on_board(self,piece,position):
-        piece.clean()
-        if self.__getitem__(position).direction != piece.tiles[0].direction:
-            return False
-            #raise DirectionException("the first tile of this piece is pointing " + piece.tiles[0].direction + ", the specified position on the board is a tile pointing " + self.__getitem__(position).direction)
 
-        if self.__getitem__(position).occupied:
-            return False
-            #raise InitializationException("first tile is occupied")
-        piece.tiles[0].coords = position
-        piece.tiles[0].placed = True
-        tr = Traverser(self)
-        hun = Queue(6) # hun = Has Unplaced Neighbors
-        hun.put(piece.tiles[0])
-        while not hun.empty():
-            t = hun.get()
-            for d,n in t.neighbors.iteritems():
-                if n.coords is not None:
-                    continue
-                tr.set_current(t.coords)
-                if tr.move_unoccupied(d):
-                    n.coords = tr.current.coords
-                    hun.put(n)
-                else:
-                    piece.clean()
-                    return False
-                    #raise DirectionException("piece didn't fit on board")
-        return True
-    
-    def place(self,piece,position=None,min_edges=None):
+    # places a Piece at a requested position, if it can be placed there.
+    # Takes:
+    #    piece - the Piece object to be placed
+    #    position - the position at which to try to place the Piece object
+    #    min_edges - each placement of a Piece may cover a certain number of
+    #        "edge tiles"; setting min_edges to a positive integer will require
+    #        that the placed Piece cover at least min_edges "edge tiles".
+    # Returns:
+    #    nothing
+    def place(self,piece,position,min_edges=None):
         
-        def all_piece_tiles_filled():
-            for t in piece.tiles:
-                if t.coords is None:
-                    return False
+        # checks if a given piece fits on the board at the requested position.
+        # does not change anything on the Board, just changes the coordinates
+        # of the Tiles in the Piece, in preparation for placement on the Board.
+        def fits_on_board():
+            if self.__getitem__(position).direction != piece.tiles[0].direction:
+                raise DirectionException("the first tile of this piece is pointing " + piece.tiles[0].direction + ", the specified position on the board is a tile pointing " + self.__getitem__(position).direction)
+
+            if self.__getitem__(position).occupied:
+                raise InitializationException("first tile is occupied")
+
+            piece.tiles[0].coords = position
+            has_unplaced_neighbors = [piece.tiles[0]]
+
+            while(len(has_unplaced_neighbors)>0):
+                has_unplaced_neighbors_copy = has_unplaced_neighbors
+                has_unplaced_neighbors = []
+                for p in has_unplaced_neighbors_copy:
+                    just_placed = []
+                    for d,n in p.neighbors.iteritems():
+                        if n.coords == None:
+                            self.traverser.set_current(p.coords)
+                            try:
+                                self.traverser.move_unoccupied(d)
+                                n.coords = self.traverser.current.coords
+                                just_placed.append(n)
+                            except (InitializationException, DirectionException):
+                                #traceback.print_exc()
+                                piece.clean()
+                                raise DirectionException("piece didn't fit on board")
+                    has_unplaced_neighbors.extend(just_placed)
             return True
-        
+
+        # checks if the placed Piece will cover enough edges. Does not change anything
+        # on the Board.
         def enough_edges_covered():
             if min_edges == None:
                 return True
@@ -190,10 +221,10 @@ class Board:
                     num_edges_covered += 1
             if num_edges_covered < min_edges:
                 piece.clean()
-                return False
-                #raise EdgeException("not enough edges covered, tile not placed")
+                raise EdgeException("not enough edges covered, tile not placed")
             return True
-        
+
+        # places the initialized Piece on the Board.
         def place_piece():
             self.pieces.append(piece)
             self.num_occupied += 6
@@ -201,23 +232,17 @@ class Board:
                 board_t = self.__getitem__(t.coords)
                 board_t.occupied = True
                 board_t.piece_name = piece.piece_name
-        
-        if position is None:
-            if not all_piece_tiles_filled():
-                return False
-            fits_on_board = True
-        else:
-            fits_on_board = self.fits_on_board(piece,position)
-        
-        if fits_on_board and enough_edges_covered():
+
+        if fits_on_board() and enough_edges_covered():
             place_piece()
             self.update_edges()
-        else:
-            piece.clean()
-            return False
         piece.clean()
-        return True
-    
+
+    # unplaces a piece from the Board.
+    # Takes:
+    #    piece_name - a string containing the name of the piece to be unplaced
+    # Returns:
+    #    nothing
     def unplace(self,piece_name):
         for t in self.occupied():
             if t.piece_name == piece_name:
@@ -228,14 +253,15 @@ class Board:
                 self.pieces.remove(p)
         self.update_edges()
         self.num_occupied -= 1
-    
+
+    # Shows the board visually with matplotlib
     def print_board(self,size=(10,10)):
         ax = blank_board(size)
-        colorDict = {'tie':(1,.5,1),'boat':(0,0,0),
-                     'check':(.5,1,1),'line':(1,1,.5),
-                     'v':(.5,.5,.5),'heart':(.5,.5,1),'s':(.5,1,.5),
-                     'hexagon':(.2,.2,.2),'mountains':(.7,.2,.7),
-                     'fedex':(.2,.7,.2),'nike':(.2,.4,.7),'weird':(0,.3,.7)
+        colorDict = {'tie':(1,.5,0),'boat':(1,.8,.3),
+                     'check':(.2,.9,.3),'line':(.9,.9,.9),
+                     'v':(.7,0,0),'heart':(1,0,0),'s':(0,.6,0),
+                     'hexagon':(1,1,0),'mountains':(.4,.5,1),
+                     'fedex':(.7,.7,.7),'nike':(0,0,.8),'weird':(.8,.8,0)
                     }
         for i in range(len(self.board)):
             for j in range(len(self.board[i])):

@@ -1,5 +1,7 @@
 from my_exceptions import *
 
+# This class traverses the Board, and raises an exception if
+# the move requested was invalid.
 class Traverser:
     def __init__(self,board):
         self.board = board
@@ -10,23 +12,22 @@ class Traverser:
     
     def move(self,direction):
         if self.current == None:
-            return False
-            #raise InitializationException("Not currently initialized to a tile.")
+            #return False
+            raise InitializationException("Not currently initialized to a tile.")
         if direction not in self.current.neighbors.keys():
-            return False
-            #raise DirectionException("Not a valid direction - this tile is pointing " + self.current.direction + " and you were trying to move in direction " + direction)
+            #return False
+            raise DirectionException("Not a valid direction - this tile is pointing " + self.current.direction + " and you were trying to move in direction " + direction)
         self.current = self.current.neighbors[direction]
         return True
     
     def move_unoccupied(self,direction):
         if self.current == None:
-            return False
-            #raise InitializationException("Not currently initialized to a tile.")
+            #return False
+            raise InitializationException("Not currently initialized to a tile.")
         if direction not in self.current.neighbors.keys():
-            return False
-            #raise DirectionException("Not a valid direction - this tile is pointing " + self.current.direction + " and you were trying to move in direction " + direction)
+            #return False
+            raise DirectionException("Not a valid direction - this tile is pointing " + self.current.direction + " and you were trying to move in direction " + direction)
         if self.current.neighbors[direction].occupied:
-            return False
-            #raise DirectionException("Tile in this direction is occupied")
+            raise DirectionException("Tile in this direction is occupied")
         self.current = self.current.neighbors[direction]
         return True
