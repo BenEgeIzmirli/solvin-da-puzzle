@@ -49,4 +49,4 @@ has so far been bypassing the GIL - using multiprocessing
 instead of multithreading is possible, but then it is
 difficult to implement shared memory, and new ctypes are
 needed; on the other hand, coding Python modules in C
-looks like a huge pain in the ass.
+looks like a huge pain.
